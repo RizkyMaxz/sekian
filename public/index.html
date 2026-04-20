@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Generator with Inbox</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .email-item {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .email-item p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Email Generator</h1>
+        <form id="email-form">
+            <label for="domain">Enter Custom Domain (optional):</label>
+            <input type="text" id="domain" name="domain" placeholder="e.g., btcmod.com">
+            <button type="submit">Generate Email</button>
+        </form>
+        <div id="result" style="margin-top: 20px;">
+            <p id="generated-email"></p>
+        </div>
+        <h2>Inbox</h2>
+        <div id="inbox-result">
+            <!-- Inbox will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        // Function to fetch the inbox for the generated email
+        async function fetchInbox(email) {
+            const response = await fetch(`/inbox?email=${email}`);
+            const data = await response.json();
+
+            const inboxContainer = document.getElementById('inbox-result');
+            if (data.success && data.result.inbox.length > 0) {
+                const inboxItems = data.result.inbox.map(email => {
+                    return `
+                        <div class="email-item">
+                            <p><strong>From:</strong> ${email.from}</p>
+                            <p><strong>Subject:</strong> ${email.subject}</p>
+                            <p><strong>Created:</strong> ${email.created}</p>
+                            <p><strong>Message:</strong> ${email.message}</p>
+                            <p><strong>Links:</strong></p>
+                            <ul>
+                                ${email.links.map(link => `<li><a href="${link}" target="_blank">${link}</a></li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }).join('');
+                inboxContainer.innerHTML = inboxItems;
+            } else {
+                inboxContainer.innerHTML = `<strong>No emails found or error occurred</strong>`;
+            }
+        }
+
+        // Handle form submission to generate email and show inbox
+        document.getElementById('email-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const domain = document.getElementById('domain').value;
+            const response = await fetch(`/generate?domain=${domain}`);
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('generated-email').innerHTML = `Generated Email: <strong>${data.result.email}</strong>`;
+                // Automatically fetch inbox for the generated email
+                fetchInbox(data.result.email);
+
+                // Refresh inbox every 10 seconds
+                setInterval(() => fetchInbox(data.result.email), 10000);
+            } else {
+                document.getElementById('generated-email').innerHTML = `<strong>Error:</strong> ${data.result}`;
+            }
+        });
+    </script>
+</body>
+</html>
